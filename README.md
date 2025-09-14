@@ -24,7 +24,7 @@ Supported features:
 - [ ] Web frontend and API
   - Not well tested.
 
-# Preliminary Results
+## Preliminary Results
 
 We use `Qwen/Qwen3-0.6B` as the model with chunk size 4096. The test files are from [brotli](https://github.com/google/brotli).
 
