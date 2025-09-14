@@ -1,0 +1,30 @@
+[build-system]
+requires = ["hatchling>=1.21.1"]
+build-backend = "hatchling.build"
+
+[project]
+name = "llmc"
+version = "0.1.0"
+description = "LLM-based text compression via token rank encoding"
+authors = [{ name = "Yi Pan", email = "conlesspan@outlook.com" }]
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "numpy",
+  "tqdm",
+  "fastapi",
+  "uvicorn[standard]",
+  "pyfastpfor",
+  "batch-invariant-ops",
+  "vllm",
+]
+
+[project.scripts]
+llmc = "llmc.entrypoint.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["llmc"]
+
+[tool.uv.sources]
+batch-invariant-ops = { path = "third_party/batch_invariant_ops", editable = true }
+vllm = { path = "third_party/vllm", editable = true }

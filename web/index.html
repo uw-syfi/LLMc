@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>LLM Compression</title>
+    <link rel="stylesheet" href="/web/style.css" />
+  </head>
+  <body>
+    <header>
+      <h1>LLM Compression Server</h1>
+      <p>Compress and decompress text using rank-based LLM compression.</p>
+    </header>
+
+    <main>
+      <section class="card">
+        <h2>Compress</h2>
+        <form id="compress-form">
+          <label>Threshold
+            <input type="number" id="compress-threshold" name="threshold" value="256" min="1" />
+          </label>
+          <label>Text
+            <textarea id="compress-text" name="text" placeholder="Enter text to compress..."></textarea>
+          </label>
+          <label>Or upload a text file
+            <input type="file" id="compress-file" name="file" accept=".txt,text/plain" />
+          </label>
+          <button type="submit">Compress</button>
+        </form>
+        <div id="compress-result" class="result"></div>
+      </section>
+
+      <section class="card">
+        <h2>Decompress</h2>
+        <form id="decompress-form">
+          <label>Threshold
+            <input type="number" id="decompress-threshold" name="threshold" value="256" min="1" />
+          </label>
+          <label>Upload gzip (.npy.gz)
+            <input type="file" id="decompress-file" name="file" accept=".gz,application/gzip" />
+          </label>
+          <label>
+            <input type="checkbox" id="decompress-download" name="download" /> Download as file
+          </label>
+          <label>Filename
+            <input type="text" id="decompress-filename" name="filename" placeholder="decompressed.txt" />
+          </label>
+          <button type="submit">Decompress</button>
+        </form>
+        <div id="decompress-result" class="result"></div>
+      </section>
+    </main>
+
+    <footer>
+      <small>Status: <span id="health">checking…</span></small>
+    </footer>
+
+    <script src="/web/app.js"></script>
+  </body>
+  </html>
+

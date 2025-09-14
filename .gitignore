@@ -1,0 +1,13 @@
+# Python related
+/**/__pycache__/
+/**/*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.venv/
+uv.lock
+
+# VSCode related
+.vscode/
+
+# Test files
+playground/
