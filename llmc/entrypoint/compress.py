@@ -1,7 +1,4 @@
-import gzip
-import pickle
 from pathlib import Path
-import numpy as np
 from tqdm import tqdm
 
 from vllm.engine.arg_utils import AsyncEngineArgs
@@ -36,7 +33,7 @@ async def compress(
     try:
         text = _read_text(input_path)
         original_size_bytes = len(text.encode("utf-8"))
-        output: list[np.ndarray] | None = None
+        output: bytes | None = None
         bar: tqdm | None = None
         async for result in encode_text(text, threshold=threshold, chunk_size=chunk_size):
             if result[0] == "total":
@@ -49,12 +46,11 @@ async def compress(
                 bar.close()
                 output = result[1]
         assert output is not None
-        with gzip.open(output_path, "wb") as f:
-            pickle.dump(output, f)
-        compressed_size_bytes = Path(output_path).stat().st_size
-        print(
-            f"Compressed {compressed_size_bytes} bytes from {original_size_bytes} bytes. "
-            f"Compression ratio: {compressed_size_bytes / max(original_size_bytes, 1):.2f}"
-        )
+        with open(output_path, "wb") as f:
+            f.write(output)
+        size_bytes = Path(output_path).stat().st_size
+        ratio = size_bytes / max(original_size_bytes, 1)
+        print(f"Compression ratio: {ratio:.6f}")
+
     finally:
         await Executor.stop()

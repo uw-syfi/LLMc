@@ -1,20 +1,23 @@
 import asyncio
-import numpy as np
 from typing import AsyncGenerator, Literal
 
 from llmc.executor import Executor
 from vllm.sampling_params import SamplingParams, RequestOutputKind, CompressionMode
-from pyfastpfor import getCodec
+import io
+import brotli
+from leb128 import u as uleb
 
 
-def decompress_to_ids(data: np.ndarray) -> list[int]:
-    size = data[0]
-    buffer_np = np.zeros(size * 2, dtype=np.uint32, order="C")
-    codec = getCodec("simdbinarypacking")
-    decompressed_size = codec.decodeArray(
-        data[1:], len(data[1:]), buffer_np, len(buffer_np)
-    )
-    return buffer_np[:decompressed_size].tolist()
+def decompress_to_ids(data: bytes) -> list[int]:
+    r = io.BytesIO(brotli.decompress(data))
+    vals: list[int] = []
+    while True:
+        try:
+            v, _ = uleb.decode_reader(r)
+            vals.append(int(v))
+        except EOFError:
+            break
+    return vals
 
 
 ChunkDecodeResult = (
@@ -24,7 +27,7 @@ ChunkDecodeResult = (
 )
 
 
-async def decode_chunk_streaming(data: np.ndarray, threshold: int = 256) -> AsyncGenerator[
+async def decode_chunk_streaming(data: bytes, threshold: int = 256) -> AsyncGenerator[
     ChunkDecodeResult,
     None,
 ]:
@@ -55,8 +58,7 @@ async def decode_chunk_streaming(data: np.ndarray, threshold: int = 256) -> Asyn
     yield ("result", engine.decode(token_ids))
 
 
-async def decode_chunk(data: np.ndarray, threshold: int = 256) -> str:
-    ids = decompress_to_ids(data)
+async def decode_chunk(ids: list[int], threshold: int = 256) -> str:
     if not ids:
         return ""
 
@@ -77,7 +79,7 @@ async def decode_chunk(data: np.ndarray, threshold: int = 256) -> str:
         last_output = req_out
 
     assert last_output is not None
-    return engine.decode(last_output.outputs[0].token_ids)
+    return engine.decode(list(last_output.outputs[0].token_ids))
 
 
 DecodeResult = tuple[Literal["total"], int] \
@@ -85,51 +87,18 @@ DecodeResult = tuple[Literal["total"], int] \
     | tuple[Literal["result"], str]
 
 
-async def decode_text_streaming(
-    data: list[np.ndarray],
-    threshold: int = 256,
-) -> AsyncGenerator[
-    DecodeResult,
-    None,
-]:
-    queue: asyncio.Queue[tuple[int, ChunkDecodeResult]] = asyncio.Queue()
-    async def enqueue(idx: int, gen: AsyncGenerator[ChunkDecodeResult, None]):
-        async for result in gen:
-            await queue.put((idx, result))
-    tasks = [
-        asyncio.create_task(
-            enqueue(idx, decode_chunk_streaming(chunk, threshold))
-        )
-        for idx, chunk in enumerate(data)
-    ]
-    unfinished_tasks = len(tasks)
-    finished_tokens = 0
-    total_tokens = []
-    final = ["" for _ in range(len(tasks))]
-    while unfinished_tasks > 0:
-        idx, result = await queue.get()
-        if result[0] == "total":
-            total_tokens.append(result[1])
-            if len(total_tokens) == len(tasks):
-                yield ("total", sum(total_tokens))
-        elif result[0] == "delta":
-            finished_tokens += result[1]
-            yield ("finished", finished_tokens)
-        elif result[0] == "result":
-            final[idx] = result[1]
-            unfinished_tasks -= 1
-    yield ("result", "".join(final))
-
-
 async def decode_text(
-    data: list[np.ndarray],
-    threshold: int = 256,
+    data: bytes,
+    chunk_size: int,
+    threshold: int,
 ) -> AsyncGenerator[
     DecodeResult,
     None,
 ]:
     async_results: list[asyncio.Task[str]] = []
-    for chunk in data:
+    ids = decompress_to_ids(data)
+    for start in range(0, len(ids), chunk_size):
+        chunk = ids[start:min(start + chunk_size, len(ids))]
         async_results.append(asyncio.create_task(decode_chunk(chunk, threshold)))
     yield ("total", len(data))
     counter = 0

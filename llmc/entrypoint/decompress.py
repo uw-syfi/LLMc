@@ -1,5 +1,5 @@
-import gzip
-import pickle
+from pathlib import Path
+import struct
 
 from vllm.engine.arg_utils import AsyncEngineArgs
 
@@ -26,11 +26,10 @@ async def decompress(
     )
     await Executor.init(engine_args)
     try:
-        with gzip.open(input_path, "rb") as f:
-            chunks = pickle.load(f)
+        bytes = Path(input_path).read_bytes()
         output: str | None = None
         bar: tqdm | None = None
-        async for result in decode_text(chunks, threshold=threshold):
+        async for result in decode_text(bytes, chunk_size=chunk_size, threshold=threshold):
             if result[0] == "total":
                 bar = tqdm(total=result[1], desc="Decoding", unit="token")
             elif result[0] == "finished":

@@ -3,25 +3,28 @@ from typing import AsyncGenerator, Literal
 from llmc.executor import Executor
 from vllm.sampling_params import SamplingParams, RequestOutputKind, CompressionMode
 import numpy as np
-from pyfastpfor import getCodec
+import brotli
+from leb128 import u as uleb
+import logging
 
 
-async def encode_to_ids(tokens: list[int], threshold: int) -> list[int]:
+async def encode_chunk(tokens: list[int], threshold: int, task_id: int = 0) -> list[int]:
     sampling_params = SamplingParams(
         temperature=0.0,
         max_tokens=1,
         output_kind=RequestOutputKind.FINAL_ONLY,
         detokenize=False,
         compression_mode=CompressionMode.ENCODE,
-        compressed_ids=None,
+        compressed_ids=tokens,
         threshold=threshold,
     )
 
     last_output = None
     engine = await Executor.instance()
+    logging.debug(f"Encoding chunk {task_id} with {len(tokens)} tokens")
     async for req_out in engine.generate(tokens, sampling_params):
         last_output = req_out
-
+    logging.debug(f"Finished encoding chunk {task_id}")
     assert last_output is not None, "No output received from vLLM engine"
     prompt_ids = last_output.prompt_token_ids or []
     assert len(prompt_ids) >= 1, "Empty prompt_token_ids from engine"
@@ -42,25 +45,18 @@ async def encode_to_ids(tokens: list[int], threshold: int) -> list[int]:
     return compressed_ids
 
 
-def compress_ids(ids: list[int]) -> np.ndarray:
-    ids_np = np.array(ids, dtype=np.uint32, order="C")
-    buffer_np = np.zeros(ids_np.size * 2, dtype=np.uint32, order="C")
-    codec = getCodec("simdbinarypacking")
-    compressed_size = codec.encodeArray(
-        ids_np, len(ids_np), buffer_np[1:], len(buffer_np[1:])
-    )
-    buffer_np[0] = len(ids)
-    return buffer_np[: compressed_size + 1]
+def _encode_varint_lib(arr: np.ndarray) -> bytes:
+    a = np.asarray(arr)
+    return b"".join(uleb.encode(int(x)) for x in a.flat)
 
 
-async def encode_chunk(tokens: list[int], threshold: int = 256) -> np.ndarray:
-    compressed_ids = await encode_to_ids(tokens, threshold)
-    return compress_ids(compressed_ids)
+def varint_brotli_compress(arr: np.ndarray) -> bytes:
+    return brotli.compress(_encode_varint_lib(arr), quality=11)
 
 
 EncodeResult = tuple[Literal["total"], int] \
     | tuple[Literal["finished"], int] \
-    | tuple[Literal["result"], list[np.ndarray]]
+    | tuple[Literal["result"], bytes]
 
 
 async def encode_text(
@@ -71,13 +67,14 @@ async def encode_text(
 ]:
     engine = await Executor.instance()
     tokens = engine.encode(text)
-    async_results: list[asyncio.Task[np.ndarray]] = []
+    async_results: list[asyncio.Task[list[int]]] = []
     for i in range(0, len(tokens), chunk_size):
         async_results.append(
             asyncio.create_task(
                 encode_chunk(
                     tokens[i : min(i + chunk_size, len(tokens))],
                     threshold,
+                    i,
                 )
             )
         )
@@ -88,4 +85,5 @@ async def encode_text(
         await future
         counter += 1
         yield ("finished", counter)
-    yield ("result", [future.result() for future in async_results])
+    concat_ids = np.concatenate([future.result() for future in async_results])
+    yield ("result", varint_brotli_compress(concat_ids))
