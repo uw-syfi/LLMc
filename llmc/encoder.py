@@ -1,4 +1,5 @@
 import asyncio
+import torch
 from typing import AsyncGenerator, Literal
 from llmc.executor import Executor
 from vllm.sampling_params import SamplingParams, RequestOutputKind, CompressionMode
@@ -29,18 +30,24 @@ async def encode_chunk(tokens: list[int], threshold: int, task_id: int = 0) -> l
     prompt_ids = last_output.prompt_token_ids or []
     assert len(prompt_ids) >= 1, "Empty prompt_token_ids from engine"
 
-    prompt_logprobs = last_output.prompt_logprobs or []
     compressed_ids = [int(prompt_ids[0])]
-    for i in range(1, len(prompt_ids)):
-        logprob_dict = prompt_logprobs[i]
-        token_id = int(prompt_ids[i])
-        if logprob_dict is None:
-            raise RuntimeError(f"Missing prompt logprobs at position {i}")
-        info = logprob_dict.get(token_id)
-        if info is not None and info.rank is not None and info.rank <= threshold:
-            compressed_ids.append(int(info.rank) - 1)
+    prompt_logprobs = last_output.prompt_logprobs
+    assert prompt_logprobs is not None
+    logprob_token_ids, logprobs, _ = prompt_logprobs
+    # The original rank that vLLM returns does not work.
+    # I don't know why.
+    logprob_token_ids = logprob_token_ids[:, 1:]
+    logprobs = logprobs[:, 1:]
+    prompt_ids = torch.tensor(prompt_ids[1:], dtype=logprob_token_ids.dtype, device=logprob_token_ids.device)
+    print(f"Length of logprob_token_ids: {len(logprob_token_ids)}")
+    index = torch.argmax((logprob_token_ids == prompt_ids.unsqueeze(1)).to(torch.int32), dim=1).tolist()
+    for i in range(len(prompt_ids)):
+        prompt_id = prompt_ids[i]
+        rank = index[i]
+        if logprob_token_ids[i, rank] == prompt_id:
+            compressed_ids.append(rank)
         else:
-            compressed_ids.append(token_id + threshold)
+            compressed_ids.append(int(prompt_id) + threshold)
 
     return compressed_ids
 

@@ -30,7 +30,7 @@ We use `Qwen/Qwen3-0.6B` as the model with chunk size 4096. The test files are f
 
 | filename | original | brotli | ours |
 |----------|----------|--------|------|
-| alice29.txt | 152089 | 50096 | 34003 |
-| asyoulik.txt | 125179 | 45687 | 38233 |
-| lcet10.txt | 419235 | 124719 | 84505 |
-| plrabn12.txt | 481861 | 174771 | 155255 |
+| alice29.txt | 152089 | 50096 | 21207 |
+| asyoulik.txt | 125179 | 45687 | 24403 |
+| lcet10.txt | 419235 | 124719 | 54076 |
+| plrabn12.txt | 481861 | 174771 | 101654 |
