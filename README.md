@@ -13,6 +13,7 @@ LLMc is a language-model–powered compressor for natural language text. It enco
 
 The core idea of LLMc is rank-based encoding. During inference, the LLM provides a probability distribution over possible next tokens. In most cases, the true next token ranks among the top few candidates. Instead of storing the token identity, LLMc stores its rank within the distribution. These ranks are small integers and therefore are compact to encode.
 
+https://github.com/user-attachments/assets/1404079e-7fb6-4499-af24-2f192c7e59dc
 
 ## Installation
 
