@@ -1,5 +1,4 @@
 from pathlib import Path
-import struct
 
 from vllm.engine.arg_utils import AsyncEngineArgs
 

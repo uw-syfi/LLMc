@@ -19,6 +19,9 @@
           <label>Threshold
             <input type="number" id="compress-threshold" name="threshold" value="256" min="1" />
           </label>
+          <label>Chunk size
+            <input type="number" id="compress-chunk-size" name="chunk_size" value="4096" min="1" />
+          </label>
           <label>Text
             <textarea id="compress-text" name="text" placeholder="Enter text to compress..."></textarea>
           </label>
@@ -36,8 +39,11 @@
           <label>Threshold
             <input type="number" id="decompress-threshold" name="threshold" value="256" min="1" />
           </label>
-          <label>Upload gzip (.npy.gz)
-            <input type="file" id="decompress-file" name="file" accept=".gz,application/gzip" />
+          <label>Chunk size
+            <input type="number" id="decompress-chunk-size" name="chunk_size" value="4096" min="1" />
+          </label>
+          <label>Upload compressed (.llmc)
+            <input type="file" id="decompress-file" name="file" accept=".llmc,application/octet-stream" />
           </label>
           <label>
             <input type="checkbox" id="decompress-download" name="download" /> Download as file

@@ -1,9 +1,7 @@
 import argparse
 import asyncio
 import os
-
 import uvicorn
-
 from llmc.entrypoint.compress import compress as compress_task
 from llmc.entrypoint.decompress import decompress as decompress_task
 
@@ -22,26 +20,26 @@ def build_parser() -> argparse.ArgumentParser:
     # compress
     p_compress = sub.add_parser("compress", help="Compress a text file")
     p_compress.add_argument("input", help="Input text file path ('-' for stdin)")
-    p_compress.add_argument("output", help="Output .pkl.gz path")
+    p_compress.add_argument("output", help="Output .llmc path (varint+brotli bytes)")
     p_compress.add_argument("--model", default="Qwen/Qwen3-8B", help="HF model name")
-    p_compress.add_argument("--threshold", type=_positive_int, default=256, help="Threshold")
-    p_compress.add_argument("--chunk-size", type=_positive_int, default=4096, dest="chunk_size", help="Chunk size")
+    p_compress.add_argument("--threshold", type=_positive_int, required=True, help="Threshold")
+    p_compress.add_argument("--chunk-size", type=_positive_int, required=True, dest="chunk_size", help="Chunk size")
     p_compress.add_argument("--gpu-mem", type=float, default=0.5, dest="gpu_memory_utilization", help="GPU memory utilization (0-1)")
 
     # decompress
     p_decompress = sub.add_parser("decompress", help="Decompress a .pkl.gz file")
-    p_decompress.add_argument("input", help="Input .pkl.gz path")
+    p_decompress.add_argument("input", help="Input .llmc path (varint+brotli bytes)")
     p_decompress.add_argument("output", help="Output text file ('-' for stdout)")
     p_decompress.add_argument("--model", default="Qwen/Qwen3-8B", help="HF model name")
-    p_decompress.add_argument("--threshold", type=_positive_int, default=256, help="Threshold")
-    p_decompress.add_argument("--chunk-size", type=_positive_int, default=4096, dest="chunk_size", help="Chunk size")
+    p_decompress.add_argument("--threshold", type=_positive_int, required=True, help="Threshold")
+    p_decompress.add_argument("--chunk-size", type=_positive_int, required=True, dest="chunk_size", help="Chunk size")
     p_decompress.add_argument("--gpu-mem", type=float, default=0.5, dest="gpu_memory_utilization", help="GPU memory utilization (0-1)")
 
     # serve
     p_serve = sub.add_parser("serve", help="Start FastAPI server")
     p_serve.add_argument("--model", default="Qwen/Qwen3-8B", help="HF model name")
-    p_serve.add_argument("--max-threshold", type=_positive_int, default=256, help="Max threshold")
-    p_serve.add_argument("--max-chunk-size", type=_positive_int, default=4096, help="Max chunk size")
+    p_serve.add_argument("--max-threshold", type=_positive_int, required=True, help="Max threshold")
+    p_serve.add_argument("--max-chunk-size", type=_positive_int, required=True, help="Max chunk size")
     p_serve.add_argument("--gpu-mem", type=float, default=0.5, dest="gpu_memory_utilization", help="GPU memory utilization (0-1)")
     p_serve.add_argument("--host", default="0.0.0.0", help="Host to bind")
     p_serve.add_argument("--port", type=int, default=8000, help="Port to bind")

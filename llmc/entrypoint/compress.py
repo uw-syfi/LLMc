@@ -40,7 +40,7 @@ async def compress(
                 bar = tqdm(total=result[1], desc="Encoding", unit="chunk")
             elif result[0] == "finished":
                 assert bar is not None
-                bar.update(result[1])
+                bar.update(1)
             elif result[0] == "result":
                 assert bar is not None
                 bar.close()

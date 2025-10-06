@@ -39,7 +39,6 @@ async def encode_chunk(tokens: list[int], threshold: int, task_id: int = 0) -> l
     logprob_token_ids = logprob_token_ids[:, 1:]
     logprobs = logprobs[:, 1:]
     prompt_ids = torch.tensor(prompt_ids[1:], dtype=logprob_token_ids.dtype, device=logprob_token_ids.device)
-    print(f"Length of logprob_token_ids: {len(logprob_token_ids)}")
     index = torch.argmax((logprob_token_ids == prompt_ids.unsqueeze(1)).to(torch.int32), dim=1).tolist()
     for i in range(len(prompt_ids)):
         prompt_id = prompt_ids[i]
@@ -67,7 +66,7 @@ EncodeResult = tuple[Literal["total"], int] \
 
 
 async def encode_text(
-    text: str, threshold: int = 256, chunk_size: int = 4096
+    text: str, threshold: int, chunk_size: int
 ) -> AsyncGenerator[
     EncodeResult,
     None,
@@ -85,8 +84,7 @@ async def encode_text(
                 )
             )
         )
-    total = (len(tokens) + chunk_size - 1) // chunk_size
-    yield ("total", total)
+    yield ("total", len(async_results))
     counter = 0
     for future in asyncio.as_completed(async_results):
         await future

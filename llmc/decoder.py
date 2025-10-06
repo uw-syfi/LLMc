@@ -20,44 +20,6 @@ def decompress_to_ids(data: bytes) -> list[int]:
     return vals
 
 
-ChunkDecodeResult = (
-    tuple[Literal["total"], int]
-    | tuple[Literal["delta"], int]
-    | tuple[Literal["result"], str]
-)
-
-
-async def decode_chunk_streaming(data: bytes, threshold: int = 256) -> AsyncGenerator[
-    ChunkDecodeResult,
-    None,
-]:
-    ids = decompress_to_ids(data)
-    if not ids:
-        yield ("result", "")
-        return
-
-    first_token_id = int(ids[0])
-    sampling_params = SamplingParams(
-        temperature=0.0,
-        max_tokens=len(ids) - 1,
-        detokenize=False,
-        output_kind=RequestOutputKind.DELTA,
-        compression_mode=CompressionMode.DECODE,
-        compressed_ids=ids[1:],
-        threshold=threshold,
-    )
-    yield ("total", len(ids))
-    yield ("delta", 1)
-
-    engine = await Executor.instance()
-    token_ids = [first_token_id]
-    async for req_out in engine.generate([first_token_id], sampling_params):
-        yield ("delta", len(req_out.outputs[0].token_ids))
-        token_ids.extend(req_out.outputs[0].token_ids)
-
-    yield ("result", engine.decode(token_ids))
-
-
 async def decode_chunk(ids: list[int], threshold: int = 256) -> str:
     if not ids:
         return ""
@@ -79,7 +41,7 @@ async def decode_chunk(ids: list[int], threshold: int = 256) -> str:
         last_output = req_out
 
     assert last_output is not None
-    return engine.decode(list(last_output.outputs[0].token_ids))
+    return engine.decode([first_token_id] + list(last_output.outputs[0].token_ids))
 
 
 DecodeResult = tuple[Literal["total"], int] \

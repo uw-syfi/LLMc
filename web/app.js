@@ -35,10 +35,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const fd = new FormData();
     const threshold = document.getElementById('compress-threshold').value;
+    const chunkSize = document.getElementById('compress-chunk-size').value;
     const text = document.getElementById('compress-text').value.trim();
     const file = document.getElementById('compress-file').files[0];
 
     fd.append('threshold', threshold);
+    fd.append('chunk_size', chunkSize);
     if (file) {
       fd.append('file', file);
     } else if (text) {
@@ -57,12 +59,12 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       const blob = await res.blob();
       const cd = res.headers.get('Content-Disposition');
-      const filename = (cd && cd.split('filename=')[1]) ? cd.split('filename=')[1] : 'compressed.npy.gz';
+      const filename = (cd && cd.split('filename=')[1]) ? cd.split('filename=')[1] : 'compressed.llmc';
       downloadBlob(blob, filename.replace(/"/g, ''));
       const orig = res.headers.get('X-Original-Size');
-      const gz = res.headers.get('X-Gzip-Size');
+      const gz = res.headers.get('X-Compressed-Size');
       const ratio = res.headers.get('X-Compression-Ratio');
-      const extra = (orig && gz && ratio) ? ` (gzip=${gz}B, original=${orig}B, ratio=${ratio})` : '';
+      const extra = (orig && gz && ratio) ? ` (compressed=${gz}B, original=${orig}B, ratio=${ratio})` : '';
       setResult(compressResult, 'success', 'Downloaded ' + filename + extra);
     } catch (err) {
       setResult(compressResult, 'error', 'Network error');
@@ -77,6 +79,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const fd = new FormData();
     const threshold = document.getElementById('decompress-threshold').value;
+    const chunkSize = document.getElementById('decompress-chunk-size').value;
     const file = document.getElementById('decompress-file').files[0];
     const download = document.getElementById('decompress-download').checked;
     const filename = document.getElementById('decompress-filename').value.trim() || 'decompressed.txt';
@@ -88,6 +91,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     fd.append('file', file);
     fd.append('threshold', threshold);
+    fd.append('chunk_size', chunkSize);
     if (download) {
       fd.append('download', 'true');
       fd.append('filename', filename);

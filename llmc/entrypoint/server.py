@@ -1,8 +1,5 @@
 import os
-import io
-import gzip
 
-import pickle
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.responses import Response, PlainTextResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -80,7 +77,8 @@ async def metrics() -> Response:
 async def compress_endpoint(
     text: str | None = Form(default=None),
     file: UploadFile | None = File(default=None),
-    threshold: int = Form(default=256, ge=1),
+    threshold: int = Form(ge=1),
+    chunk_size: int = Form(ge=1),
 ) -> Response:
     if not text and not file:
         raise HTTPException(status_code=400, detail="Provide either 'text' or 'file'.")
@@ -100,44 +98,33 @@ async def compress_endpoint(
     assert text is not None
 
     original_size_bytes = len(text.encode("utf-8"))
-    arr = []
-    async for result in encode_text(text, threshold=threshold):
+    payload: bytes = b""
+    async for result in encode_text(text, threshold=threshold, chunk_size=chunk_size):
         if result[0] == "result":
-            arr = result[1]
+            payload = result[1]
             break
-    gz_buf = io.BytesIO()
-    with gzip.GzipFile(fileobj=gz_buf, mode="wb") as gz:
-        gz.write(pickle.dumps(arr))
-    gz_bytes = gz_buf.getvalue()
-    gz_size_bytes = len(gz_bytes)
-    ratio = gz_size_bytes / max(original_size_bytes, 1)
+    size_bytes = len(payload)
+    ratio = size_bytes / max(original_size_bytes, 1)
     headers = {
-        "Content-Disposition": "attachment; filename=compressed.pkl.gz",
+        "Content-Disposition": "attachment; filename=compressed.llmc",
         "X-Original-Size": str(original_size_bytes),
-        "X-Gzip-Size": str(gz_size_bytes),
+        "X-Compressed-Size": str(size_bytes),
         "X-Compression-Ratio": f"{ratio:.6f}",
     }
-    return Response(content=gz_bytes, media_type="application/gzip", headers=headers)
+    return Response(content=payload, media_type="application/octet-stream", headers=headers)
 
 
 @app.post("/decompress")
 async def decompress_endpoint(
     file: UploadFile = File(...),
-    threshold: int = Form(default=256, ge=1),
+    threshold: int = Form(ge=1),
+    chunk_size: int = Form(ge=1),
     download: bool = Form(default=False),
     filename: str | None = Form(default=None),
 ) -> Response:
-    raw = await file.read()
-    try:
-        with gzip.GzipFile(fileobj=io.BytesIO(raw), mode="rb") as gz:
-            payload = gz.read()
-        arr = pickle.loads(payload)
-    except Exception as exc:
-        raise HTTPException(
-            status_code=400, detail="Invalid gzip/.pkl payload"
-        ) from exc
+    data = await file.read()
     text = ""
-    async for result in decode_text(arr, threshold=threshold):
+    async for result in decode_text(data, chunk_size=chunk_size, threshold=threshold):
         if result[0] == "result":
             text = result[1]
             break
