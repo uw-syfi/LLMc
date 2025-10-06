@@ -1,5 +1,10 @@
 <p align="center">
-  <img src="./figures/logo.png" alt="LLMc" width="120" />
+  <img src="./figures/logo.png" alt="LLMc" width="30%" />
+</p>
+
+<p align="center">
+  <a href="https://syfi.cs.washington.edu/blog/2025-10-03-llmc-compression">Blog</a> |
+  <a href="https://github.com/uw-syfi/llmc">Code</a>
 </p>
 
 LLMc is a language-model–powered compressor for natural language text. It encodes token ranks instead of raw token IDs and stores them with a compact format.
@@ -8,10 +13,6 @@ LLMc is a language-model–powered compressor for natural language text. It enco
 
 The core idea of LLMc is rank-based encoding. During inference, the LLM provides a probability distribution over possible next tokens. In most cases, the true next token ranks among the top few candidates. Instead of storing the token identity, LLMc stores its rank within the distribution. These ranks are small integers and therefore are compact to encode.
 
-<video autoplay loop muted width="100%">
-  <source src="/figures/design.webm" type="video/webm">
-  Your browser does not support the video tag.
-</video>
 
 ## Installation
 
@@ -43,7 +44,7 @@ llmc compress input.txt output.llmc \
 
 Notes:
 - `--threshold` and `--chunk-size` are required.
-- `output.llmc` is a raw byte stream (not gzip/pickle).
+- `output.llmc` is a raw byte stream.
 
 ### 2) Decompress
 
@@ -59,7 +60,7 @@ llmc decompress output.llmc restored.txt \
 
 ### 3) Serve (Web + API)
 
-Run the FastAPI server and static web frontend:
+Run the FastAPI server and web frontend:
 
 ```bash
 llmc serve \
@@ -77,7 +78,7 @@ The server enforces upper bounds via `--max-threshold` and `--max-chunk-size`. T
 Open the browser at `http://<host>:8000` after starting the server. Enter Threshold and Chunk size for each operation.
 
 <p align="center">
-  <img src="./figures/frontend.png" alt="Web frontend" width="720" />
+  <img src="./figures/frontend.png" alt="Web frontend" width="80%" />
 </p>
 
 ## Results
@@ -85,7 +86,7 @@ Open the browser at `http://<host>:8000` after starting the server. Enter Thresh
 Compression ratio with comparison to various traditional algorithms.
 
 <p align="center">
-  <img src="./figures/result.png" alt="Compression results" width="720" />
+  <img src="./figures/result.png" alt="Compression results" width="80%" />
 </p>
 
 ## Acknowledgements
