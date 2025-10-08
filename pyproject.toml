@@ -14,9 +14,15 @@ dependencies = [
   "tqdm",
   "fastapi",
   "uvicorn[standard]",
-  "pyfastpfor",
   "batch-invariant-ops",
   "vllm",
+  "brotli",
+  "leb128",
+]
+
+[project.optional-dependencies]
+test = [
+  "pytest",
 ]
 
 [project.scripts]
@@ -28,3 +34,9 @@ packages = ["llmc"]
 [tool.uv.sources]
 batch-invariant-ops = { path = "third_party/batch_invariant_ops", editable = true }
 vllm = { path = "third_party/vllm", editable = true }
+
+[tool.pytest.ini_options]
+env = [
+  "PYTEST_DISABLE_PLUGIN_AUTOLOAD=1",
+  "LLMC_MODEL=Qwen/Qwen3-0.6B",
+]

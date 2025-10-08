@@ -71,8 +71,14 @@ class Executor:
         async with cls._lock:
             if cls._instance is not None:
                 raise RuntimeError("Executor already initialized")
-            cls._instance = WrappedvLLMEngine(engine_args)
-            await cls._instance.start()
+            tmp = WrappedvLLMEngine(engine_args)
+            try:
+                await tmp.start()
+            except Exception:
+                cls._instance = None
+                raise
+            else:
+                cls._instance = tmp
 
     @classmethod
     async def instance(cls) -> WrappedvLLMEngine:
@@ -84,7 +90,8 @@ class Executor:
     @classmethod
     async def stop(cls) -> None:
         async with cls._lock:
-            if cls._instance is None or not cls._instance.is_running:
+            if cls._instance is None:
                 raise RuntimeError("Executor not initialized or not running")
-            await cls._instance.stop()
+            if cls._instance.is_running:
+                await cls._instance.stop()
             cls._instance = None
