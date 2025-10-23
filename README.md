@@ -22,7 +22,7 @@ We recommend using uv to manage the virtual environment.
 ```bash
 uv venv -p 3.11
 # We use a modified version of vLLM and batch_invariant_ops as backend.
-git submodule update --init --recursive
+git submodule update --init --recursive --depth 1
 export VLLM_USE_PRECOMPILED=1
 uv sync
 ```
